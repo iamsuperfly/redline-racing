@@ -8,21 +8,14 @@ import {
   Settings,
   Wrench,
 } from "lucide-react";
+import { useState } from "react";
 import { CARS, DIFFICULTIES, MODES, TRACKS, UPGRADE_LABELS, upgradeCost, UPGRADE_MAX } from "@/game/data";
 import { unlockSharedAudio } from "@/game/audio";
 import { Button } from "@/components/ui/button";
+import { CarPreview } from "@/components/game/car-preview";
 import { useGame } from "@/lib/game-store";
 import { cn, formatMoney, formatTime, ordinal } from "@/lib/utils";
-import type { TrackDef, UpgradeKey } from "@/game/types";
-
-const PAINT: Record<string, string> = {
-  sparrow: "bg-paint-sparrow",
-  comet: "bg-paint-comet",
-  vanguard: "bg-paint-vanguard",
-  thunder: "bg-paint-thunder",
-  phantom: "bg-paint-phantom",
-  apex: "bg-paint-apex",
-};
+import type { CarDef, TrackDef, UpgradeKey } from "@/game/types";
 
 function Shell({ children, title, back }: { children: React.ReactNode; title?: string; back?: () => void }) {
   const money = useGame((s) => s.save.money);
@@ -248,13 +241,20 @@ function StatBar({ label, value }: { label: string; value: number }) {
   );
 }
 
+function focusCar(saveSelected: string, previewId: string | null): CarDef {
+  return CARS.find((c) => c.id === (previewId ?? saveSelected)) ?? CARS[0]!;
+}
+
 export function GarageScreen() {
   const go = useGame((s) => s.go);
   const save = useGame((s) => s.save);
   const upgrade = useGame((s) => s.upgrade);
   const selectCar = useGame((s) => s.selectCar);
-  const owned = CARS.filter((c) => save.unlockedCars.includes(c.id));
-  const car = owned.find((c) => c.id === save.selectedCarId) ?? owned[0]!;
+  const buyCar = useGame((s) => s.buyCar);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const car = focusCar(save.selectedCarId, previewId);
+  const owned = save.unlockedCars.includes(car.id);
+  const selected = save.selectedCarId === car.id;
   const up = save.upgrades[car.id] ?? { engine: 0, handling: 0, brakes: 0, nitro: 0 };
   const keys = Object.keys(UPGRADE_LABELS) as UpgradeKey[];
 
@@ -263,31 +263,60 @@ export function GarageScreen() {
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-[var(--radius-xl)] border border-border bg-surface p-5">
           <div className="mb-4 flex gap-2 overflow-x-auto">
-            {owned.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => selectCar(c.id)}
-                className={cn(
-                  "h-10 shrink-0 rounded-full border px-3 text-sm",
-                  c.id === car.id ? "border-fg/40 bg-elevated" : "border-border",
-                )}
-              >
-                {c.name}
-              </button>
-            ))}
+            {CARS.map((c) => {
+              const isOwned = save.unlockedCars.includes(c.id);
+              const active = c.id === car.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setPreviewId(c.id);
+                    if (isOwned) selectCar(c.id);
+                  }}
+                  className={cn(
+                    "flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm",
+                    active ? "border-fg/40 bg-elevated" : "border-border",
+                    !isOwned && "text-muted",
+                  )}
+                >
+                  {!isOwned ? <Lock className="size-3" /> : null}
+                  {c.name}
+                </button>
+              );
+            })}
           </div>
-          <div className="mb-5 flex h-36 items-end justify-center rounded-[var(--radius-lg)] bg-elevated">
-            <div className={cn("mb-6 h-10 w-40 rounded-[var(--radius-sm)]", PAINT[car.id] ?? "bg-fg")} />
+          <div className="relative mb-5 h-48 overflow-hidden rounded-[var(--radius-lg)] bg-elevated">
+            <CarPreview color={car.color} accent={car.accent} body={car.body} />
+            {!owned ? (
+              <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1 rounded-full border border-border bg-surface/80 px-2 py-1 text-xs text-muted">
+                <Lock className="size-3" />
+                Locked · {formatMoney(car.cost)}
+              </div>
+            ) : null}
           </div>
           <p className="font-display text-4xl tracking-wide">{car.name}</p>
           <p className="mt-1 text-sm text-muted">{car.tagline}</p>
+          <p className="mt-2 font-mono text-xs text-subtle">
+            {owned ? (car.cost === 0 ? "Starter" : `Owned · ${formatMoney(car.cost)}`) : `Unlock ${formatMoney(car.cost)}`}
+          </p>
           <div className="mt-5 grid gap-3">
-            <StatBar label="Top speed" value={car.stats.topSpeed + up.engine * 0.55} />
-            <StatBar label="Acceleration" value={car.stats.accel + up.engine * 0.7} />
-            <StatBar label="Handling" value={car.stats.handling + up.handling * 0.7} />
-            <StatBar label="Braking" value={car.stats.braking + up.brakes * 0.7} />
-            <StatBar label="Nitro" value={car.stats.nitro + up.nitro * 0.7} />
+            <StatBar label="Top speed" value={car.stats.topSpeed + (owned ? up.engine * 0.55 : 0)} />
+            <StatBar label="Acceleration" value={car.stats.accel + (owned ? up.engine * 0.7 : 0)} />
+            <StatBar label="Handling" value={car.stats.handling + (owned ? up.handling * 0.7 : 0)} />
+            <StatBar label="Braking" value={car.stats.braking + (owned ? up.brakes * 0.7 : 0)} />
+            <StatBar label="Nitro" value={car.stats.nitro + (owned ? up.nitro * 0.7 : 0)} />
+          </div>
+          <div className="mt-5">
+            {owned ? (
+              <Button variant={selected ? "primary" : "secondary"} className="w-full" onClick={() => selectCar(car.id)}>
+                {selected ? "Selected for race" : "Select for race"}
+              </Button>
+            ) : (
+              <Button className="w-full" disabled={save.money < car.cost} onClick={() => buyCar(car.id)}>
+                Unlock {car.name} · {formatMoney(car.cost)}
+              </Button>
+            )}
           </div>
         </div>
         <div className="grid gap-3">
@@ -309,8 +338,12 @@ export function GarageScreen() {
                     ))}
                   </div>
                 </div>
-                <Button variant="secondary" disabled={maxed || save.money < cost} onClick={() => upgrade(car.id, key)}>
-                  {maxed ? "Max" : formatMoney(cost)}
+                <Button
+                  variant="secondary"
+                  disabled={!owned || maxed || save.money < cost}
+                  onClick={() => upgrade(car.id, key)}
+                >
+                  {!owned ? "Locked" : maxed ? "Max" : formatMoney(cost)}
                 </Button>
               </div>
             );
@@ -334,8 +367,14 @@ export function CarsScreen() {
           const selected = save.selectedCarId === c.id;
           return (
             <article key={c.id} className="rounded-[var(--radius-xl)] border border-border bg-surface p-4">
-              <div className="mb-4 flex h-24 items-end justify-center rounded-[var(--radius-md)] bg-elevated">
-                <div className={cn("mb-5 h-8 w-32 rounded-[var(--radius-xs)]", PAINT[c.id] ?? "bg-fg")} />
+              <div className="relative mb-4 h-28 overflow-hidden rounded-[var(--radius-md)] bg-elevated">
+                <CarPreview color={c.color} accent={c.accent} body={c.body} spin={selected} />
+                {owned ? null : (
+                  <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-full border border-border bg-surface/80 px-2 py-0.5 text-[10px] text-muted">
+                    <Lock className="size-3" />
+                    {formatMoney(c.cost)}
+                  </div>
+                )}
               </div>
               <div className="flex items-start justify-between gap-2">
                 <div>
