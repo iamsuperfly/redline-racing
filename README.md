@@ -1,32 +1,27 @@
 # REDLINE
 
-Arcade 3D car racing. Choose a car, pick a race, drive against AI, earn money, unlock cars, and upgrade your ride.
+Arcade 3D car racing. Race, drift, earn cash, unlock cars, and upgrade your garage.
 
 ## Play
 
-- **Race** — Circuit, Sprint, Time Trial, Elimination
-- **Garage** — Engine, handling, brakes, nitro upgrades
-- **Cars** — Six vehicles with distinct handling
-- **Tracks** — City Night, Coastal Highway, Mountain Pass, Industrial District
+- **W / ↑** accelerate
+- **S / ↓** brake / reverse
+- **A / D** steer
+- **Space** drift (release for a boost)
+- **Shift / E / N** nitro
+- **Esc / P** pause
 
-## Controls
+On a phone, use the on-screen steer pad and action buttons.
 
-| Action | Keyboard | Gamepad |
-| --- | --- | --- |
-| Accelerate | W / ↑ | RT / A |
-| Brake / reverse | S / ↓ | LT / B |
-| Steer | A D / ← → | Left stick |
-| Drift | Space | LB |
-| Nitro | Shift / E | RB |
-| Pause | Esc | Start |
+## Modes
 
-Touch controls appear on mobile.
+- **Circuit** — multiple laps
+- **Sprint** — start to finish, one shot
+- **Time Trial** — solo against the clock
+- **Elimination** — last place is cut each lap
 
-## Progression
+Tracks: City Night, Coastal Highway, Mountain Pass, Industrial District.
 
-Race → earn cash → unlock cars → upgrade → harder tracks and difficulties.
-Progress is saved locally in the browser.
+Difficulty: Easy, Hard, Nightmare.
 
-## Stack
-
-React + TanStack Start + Three.js. Arcade vehicle physics (not a sim).
+Progress (money, unlocks, upgrades, best times) is saved in the browser.
