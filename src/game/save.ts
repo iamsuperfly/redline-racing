@@ -70,19 +70,19 @@ export function bestKey(trackId: string, mode: string, difficulty: string, carId
   return `${trackId}:${mode}:${difficulty}:${carId}`;
 }
 
+/** Cars/tracks the player can now afford. Does not auto-unlock — buy still required. */
 export function maybeUnlocks(save: SaveData): { cars: string[]; tracks: string[] } {
   const cars: string[] = [];
   const tracks: string[] = [];
   for (const c of CARS) {
-    if (!save.unlockedCars.includes(c.id) && save.money >= c.cost && c.cost > 0) {
-      /* listed as available, not auto-unlocked */
+    if (!save.unlockedCars.includes(c.id) && c.cost > 0 && save.money >= c.cost) {
+      cars.push(c.id);
     }
   }
   for (const t of TRACKS) {
-    if (!save.unlockedTracks.includes(t.id) && save.money >= t.cost && t.cost > 0) {
+    if (!save.unlockedTracks.includes(t.id) && t.cost > 0 && save.money >= t.cost) {
       tracks.push(t.id);
     }
   }
-  void cars;
   return { cars, tracks };
 }

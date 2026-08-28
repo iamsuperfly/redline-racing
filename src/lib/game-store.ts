@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { CARS, TRACKS, carById, emptyUpgrades, lapsFor, trackById, upgradeCost, UPGRADE_MAX } from "@/game/data";
-import { bestKey, defaultSave, loadSave, persistSave } from "@/game/save";
+import { carById, emptyUpgrades, lapsFor, trackById, upgradeCost, UPGRADE_MAX } from "@/game/data";
+import { bestKey, defaultSave, maybeUnlocks, persistSave } from "@/game/save";
 import { unlockSharedAudio } from "@/game/audio";
 import type {
   Difficulty,
@@ -78,12 +78,7 @@ export const useGame = create<GameStore>((set, get) => ({
       save.bestTimes[key] = result.raceTime;
       newBest = true;
     }
-    const unlockedCars = CARS.filter((c) => !save.unlockedCars.includes(c.id) && c.cost > 0 && save.money >= c.cost).map(
-      (c) => c.id,
-    );
-    const unlockedTracks = TRACKS.filter(
-      (t) => !save.unlockedTracks.includes(t.id) && t.cost > 0 && save.money >= t.cost,
-    ).map((t) => t.id);
+    const { cars: unlockedCars, tracks: unlockedTracks } = maybeUnlocks(save);
     const lastResult: RaceResult = {
       ...result,
       money: save.money,
